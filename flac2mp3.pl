@@ -19,6 +19,7 @@ use lib "$FindBin::Bin/lib";
 
 use Audio::FLAC::Header;
 use Data::Dumper;
+$Data::Dumper::Useqq = 1;
 use Encode;
 use File::Basename;
 use File::Copy;
@@ -77,13 +78,17 @@ my @flacargs = qw (
 # hash mapping FLAC tag names to MP3 frames
 my %MP3frames = (
     'ALBUM'                   => 'TALB',
+    'ALBUMSORT'               => 'TSOA',
     'ALBUMARTIST'             => 'TPE2',
+    'ALBUMARTISTSORT'         => 'TSO2',
     'ARTIST'                  => 'TPE1',
+    'ARTISTSORT'              => 'TSOP',
     'BAND'                    => 'TPE2',
     'BPM'                     => 'TBPM',
     'COMMENT'                 => 'COMM',
     'COMPILATION'             => 'TCMP',
     'COMPOSER'                => 'TCOM',
+    'COMPOSERSORT'            => 'TSOC',
     'CONDUCTOR'               => 'TPE3',
     'DATE'                    => 'TYER',
     'DISCNUMBER'              => 'TPOS',
@@ -164,7 +169,7 @@ $| = 1;
 my ( $source_root, $target_root ) = @ARGV;
 
 showversion() if ( $Options{version} );
-showhelp()    if ( $Options{help} );
+showusage()   if ( $Options{help} );
 showusage()
     if ( !defined $source_root
     or !defined $target_root
@@ -345,6 +350,7 @@ sub find_files {
     my @found_files;
 
     my $found_list = File::Find::Rule->extras( { follow => 1 } )->name($regex);
+    $found_list = File::Find::Rule->or( File::Find::Rule->directory->name( '.AppleDouble' )->prune->discard, $found_list );
     if ( $Options{skipfile} ) {
         my $skip_list = File::Find::Rule->directory->exec(
             sub {
@@ -579,7 +585,6 @@ sub examine_destfile_tags {
                     if ( ref($tag_info) ) {
                         my $cfname = $MP3frametexts{$frame} || '';    # we may not know $frame
                         my $cfkey = $Complex_Frame_Keys{$method};
-
                         if ( $$tag_info{$cfkey} eq $cfname ) {
                             $dest_text = $$tag_info{'Text'};
                             if ( $frame eq 'MD5' ) {
