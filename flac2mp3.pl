@@ -101,36 +101,36 @@ my @flacargs = qw (
 
 # hash mapping FLAC tag names to MP3 frames
 my %MP3frames = (
-    'ALBUM'                   => 'TALB',
-    'ALBUMSORT'               => 'TSOA',
-    'ALBUMARTIST'             => 'TPE2',
-    'ALBUMARTISTSORT'         => 'TSO2',
-    'ARTIST'                  => 'TPE1',
-    'ARTISTSORT'              => 'TSOP',
-    'BAND'                    => 'TPE2',
-    'BPM'                     => 'TBPM',
-    'COMMENT'                 => 'COMM',
-    'COMPILATION'             => 'TCMP',
-    'COMPOSER'                => 'TCOM',
-    'COMPOSERSORT'            => 'TSOC',
-    'CONDUCTOR'               => 'TPE3',
-    'DATE'                    => 'TYER',
-    'DISCNUMBER'              => 'TPOS',
-    'GENRE'                   => 'TCON',
-    'ISRC'                    => 'TSRC',
-    'LYRICIST'                => 'TEXT',
-    'PUBLISHER'               => 'TPUB',
-    'TITLE'                   => 'TIT2',
-    'TRACKNUMBER'             => 'TRCK',
-    'MUSICBRAINZ_ALBUMID'     => 'TXXX',
-    'MUSICBRAINZ_ALBUMSTATUS' => 'TXXX',
-    'MUSICBRAINZ_ALBUMTYPE'   => 'TXXX',
-    'MUSICBRAINZ_ARTISTID'    => 'TXXX',
-    'MUSICBRAINZ_SORTNAME'    => 'TXXX',
-    'MUSICBRAINZ_TRACKID'     => 'UFID',
-    'MUSICBRAINZ_TRMID'       => 'TXXX',
-    'MD5'                     => 'TXXX',
-    'PIC'                     => 'APIC',
+  'ALBUM'                   => 'TALB',
+  'ALBUMSORT'               => 'TSOA',
+  'ALBUMARTIST'             => 'TPE2',
+  'ALBUMARTISTSORT'         => 'TSO2',
+  'ARTIST'                  => 'TPE1',
+  'ARTISTSORT'              => 'TSOP',
+  'BAND'                    => 'TPE2',
+  'BPM'                     => 'TBPM',
+  'COMMENT'                 => 'COMM',
+  'COMPILATION'             => 'TCMP',
+  'COMPOSER'                => 'TCOM',
+  'COMPOSERSORT'            => 'TSOC',
+  'CONDUCTOR'               => 'TPE3',
+  'DATE'                    => 'TYER',
+  'DISCNUMBER'              => 'TPOS',
+  'GENRE'                   => 'TCON',
+  'ISRC'                    => 'TSRC',
+  'LYRICIST'                => 'TEXT',
+  'PUBLISHER'               => 'TPUB',
+  'TITLE'                   => 'TIT2',
+  'TRACKNUMBER'             => 'TRCK',
+  'MUSICBRAINZ_ALBUMID'     => 'TXXX',
+  'MUSICBRAINZ_ALBUMSTATUS' => 'TXXX',
+  'MUSICBRAINZ_ALBUMTYPE'   => 'TXXX',
+  'MUSICBRAINZ_ARTISTID'    => 'TXXX',
+  'MUSICBRAINZ_SORTNAME'    => 'TXXX',
+  'MUSICBRAINZ_TRACKID'     => 'UFID',
+  'MUSICBRAINZ_TRMID'       => 'TXXX',
+  'MD5'                     => 'TXXX',
+  'PIC'                     => 'APIC',
 
   'REPLAYGAIN_TRACK_PEAK' => 'TXXX',
   'REPLAYGAIN_TRACK_GAIN' => 'TXXX',
@@ -403,23 +403,22 @@ sub find_files {
 
   my @found_files;
 
-    my $found_list = File::Find::Rule->extras( { follow => 1 } )->name($regex);
-    $found_list = File::Find::Rule->or( File::Find::Rule->directory->name( '.AppleDouble' )->prune->discard, $found_list );
-    if ( $Options{skipfile} ) {
-        my $skip_list = File::Find::Rule->directory->exec(
-            sub {
-                my ( $fname, $fpath, $frpath ) = @_;
-                if ( -f File::Spec->catdir( $frpath, $Options{skipfilename} ) ) {
-                    return 1;
-                }
-                else {
-                    return 0;
-                }
-            }
-        )->prune->discard;
-        @found_files = sort File::Find::Rule->or( $skip_list, $found_list )->in($path);
-    }
-    else {
+  my $rule = File::Find::Rule->extras( { follow => 1 } );
+  $rule = File::Find::Rule->or( File::Find::Rule->directory->name( '.AppleDouble' )->prune->discard, $rule );
+  if ( $Options{skipfile} ) {
+    @found_files = sort $rule->any(
+      $rule->new->directory->exec(
+        sub {
+          my ( $fname, $fpath, $frpath ) = @_;
+          -f File::Spec->catdir( $frpath, $Options{skipfilename} );
+        }
+        )->prune->discard,
+      $rule->new->file->name($regex)
+    )->in($path);
+  }
+  else {
+    @found_files = sort $rule->in($path);
+  }
 
   $Options{debug} && msg( Dumper(@found_files) );
 
@@ -725,12 +724,12 @@ sub examine_destfile_tags {
 }
 
 sub transcode_file {
-    my $source     = shift;
-    $source        =~ s-"-\\"-g;
-    my $target     = shift;
-    $target        =~ s-"-\\"-g;
-    my $pflags_ref = shift;
-    my %pflags     = %$pflags_ref;    # this is only to minimize changes
+  my $source     = shift;
+  $source        =~ s-"-\\"-g;
+  my $target     = shift;
+  $target        =~ s-"-\\"-g;
+  my $pflags_ref = shift;
+  my %pflags     = %$pflags_ref;    # this is only to minimize changes
 
   my ( $target_volume, $target_dir, $target_filename ) =
     File::Spec->splitpath($target);
