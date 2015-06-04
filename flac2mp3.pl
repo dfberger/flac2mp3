@@ -30,7 +30,7 @@ use File::Temp qw/ cleanup /;
 use File::Which;
 use Getopt::Long;
 use MP3::Tag;
-use Parallel::Forkmanager;
+use Parallel::ForkManager;
 use Scalar::Util qw/ looks_like_number /;
 use FreezeThaw qw/ cmpStr /;
 use Digest::MD5;
@@ -169,12 +169,12 @@ $| = 1;
 my ( $source_root, $target_root ) = @ARGV;
 
 showversion() if ( $Options{version} );
-showusage()   if ( $Options{help} );
 showusage()
     if ( !defined $source_root
     or !defined $target_root
     or $Options{processes} < 1
-    or $Options{usage} );
+    or $Options{usage}
+    or $Options{help} );
 
 @lameargs = $Options{lameargs}
     if $Options{lameargs};
@@ -656,7 +656,9 @@ sub examine_destfile_tags {
 
 sub transcode_file {
     my $source     = shift;
+    $source        =~ s-"-\\"-g;
     my $target     = shift;
+    $target        =~ s-"-\\"-g;
     my $pflags_ref = shift;
     my %pflags     = %$pflags_ref;    # this is only to minimize changes
 
