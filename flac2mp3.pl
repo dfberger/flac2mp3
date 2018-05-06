@@ -107,7 +107,7 @@ my %MP3frames = (
   'ALBUMARTISTSORT'         => 'TSO2',
   'ARTIST'                  => 'TPE1',
   'ARTISTSORT'              => 'TSOP',
-  'BAND'                    => 'TPE2',
+#  'BAND'                    => 'TPE2',
   'BPM'                     => 'TBPM',
   'COMMENT'                 => 'COMM',
   'COMPILATION'             => 'TCMP',
@@ -564,8 +564,32 @@ sub preprocess_flac_tags {
   if ( $tags_to_update{'TRACKNUMBER'} ) {
     my $fixeduptracknumber =
       fixUpTrackNumber( $tags_to_update{'TRACKNUMBER'} );
+    if ( $source_tags->{'TRACKTOTAL'} &&
+         looks_like_number( $source_tags->{'TRACKTOTAL'} ) ) {
+      my $fixeduptracktotal =
+       fixUpTrackNumber( $source_tags->{'TRACKTOTAL'} );
+
+      $fixeduptracknumber = sprintf( "%02u/%02u", $fixeduptracknumber,
+        $fixeduptracktotal );
+    }
     if ( $fixeduptracknumber ne $tags_to_update{'TRACKNUMBER'} ) {
       $tags_to_update{'TRACKNUMBER'} = $fixeduptracknumber;
+    }
+  }
+
+  # Fix up DISCNUMBER
+  if ( $tags_to_update{'DISCNUMBER'} ) {
+    my $fixedupdiscnumber =
+      fixUpTrackNumber( $tags_to_update{'DISCNUMBER'} );
+    if ( $source_tags->{'DISCTOTAL'} &&
+         looks_like_number( $source_tags->{'DISCTOTAL'} ) ) {
+      my $fixedupdisctotal =
+       fixUpTrackNumber( $source_tags->{'DISCTOTAL'} );
+      $fixedupdiscnumber = sprintf( "%02u/%02u", $fixedupdiscnumber,
+        $fixedupdisctotal );
+    }
+    if ( $fixedupdiscnumber ne $tags_to_update{'DISCNUMBER'} ) {
+      $tags_to_update{'DISCNUMBER'} = $fixedupdiscnumber;
     }
   }
 
@@ -725,9 +749,7 @@ sub examine_destfile_tags {
 
 sub transcode_file {
   my $source     = shift;
-  $source        =~ s-"-\\"-g;
   my $target     = shift;
-  $target        =~ s-"-\\"-g;
   my $pflags_ref = shift;
   my %pflags     = %$pflags_ref;    # this is only to minimize changes
 
@@ -761,6 +783,7 @@ sub transcode_file {
           or die "Can't create directory $dst_dir\n";
       }
       $tmpfh = new File::Temp(
+        TEMPLATE => "flac2mp3.$$.XXXXX",
         UNLINK => 1,
         DIR    => $dst_dir,
         SUFFIX => '.tmp'
@@ -933,6 +956,9 @@ sub fixUpTrackNumber {
     # Check TRACKNUMBER tag is numeric
     if ( looks_like_number($trackNum) ) {
       $trackNum = sprintf( "%02u", $trackNum );
+    }
+    elsif ( $trackNum =~ /(\d+)\/(\d+)/ ) {
+      $trackNum = sprintf( "%02u/%02u", $1, $2 );
     }
     else {
       $Options{info}
